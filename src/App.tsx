@@ -4,7 +4,9 @@ import {
   Room,
   AvailabilityResult,
   checkAvailability,
+  filterRooms,
   formatTime,
+  parseAttendees,
   parseTime,
 } from '@/utils/availability';
 
@@ -57,23 +59,48 @@ const ROOMS: Room[] = [
   },
 ];
 
+const EQUIPMENT_OPTIONS = [
+  'projector',
+  'whiteboard',
+  'computers',
+  'microphone',
+  'video-conferencing',
+];
+
 // Fixed "current time" of the prototype (fictional data, deterministic behavior).
 const FIXED_CURRENT_TIME = '09:00';
 
 function App() {
   const [roomId, setRoomId] = useState(ROOMS[0].id);
+  const [attendees, setAttendees] = useState('');
+  const [equipment, setEquipment] = useState<string[]>([]);
   const [currentTime, setCurrentTime] = useState(FIXED_CURRENT_TIME);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [result, setResult] = useState<AvailabilityResult | null>(null);
 
-  const room = useMemo(
-    () => ROOMS.find((r) => r.id === roomId)!,
-    [roomId]
+  const minAttendees = parseAttendees(attendees);
+  const attendeesInvalid = minAttendees === null;
+
+  const filteredRooms = useMemo(
+    () => filterRooms(ROOMS, { minAttendees: minAttendees ?? 0, equipment }),
+    [minAttendees, equipment]
   );
+
+  // The chosen room, or the first matching room when the chosen one was filtered out.
+  const room: Room | null =
+    filteredRooms.find((r) => r.id === roomId) ?? filteredRooms[0] ?? null;
+
+  const toggleEquipment = (item: string) => {
+    setEquipment((current) =>
+      current.includes(item) ? current.filter((x) => x !== item) : [...current, item]
+    );
+    setResult(null);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!room) return;
 
     const ct = parseField('current time', currentTime);
     if (ct === null) return;
@@ -129,24 +156,80 @@ function App() {
               Check a room
             </h2>
 
-            <label className="mb-4 block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Room</span>
-              <select
-                value={roomId}
-                onChange={(e) => {
-                  setRoomId(e.target.value);
-                  setResult(null);
-                }}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              >
-                {ROOMS.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                    {r.blocked ? ' (blocked)' : ''}
-                  </option>
+            <fieldset className="mb-4 rounded-lg border border-slate-200 p-3">
+              <legend className="px-1 text-sm font-medium text-slate-700">
+                Room requirements
+              </legend>
+
+              <label className="mb-3 block">
+                <span className="mb-1 block text-xs font-medium text-slate-600">
+                  Attendees (minimum capacity)
+                </span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="e.g. 15"
+                  value={attendees}
+                  onChange={(e) => {
+                    setAttendees(e.target.value);
+                    setResult(null);
+                  }}
+                  aria-label="Attendees"
+                  aria-invalid={attendeesInvalid}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+                {attendeesInvalid && (
+                  <span className="mt-1 block text-xs text-red-700">
+                    Attendees must be a whole number (capacity filter is ignored).
+                  </span>
+                )}
+              </label>
+
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {EQUIPMENT_OPTIONS.map((item) => (
+                  <label key={item} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={equipment.includes(item)}
+                      onChange={() => toggleEquipment(item)}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                    {item}
+                  </label>
                 ))}
-              </select>
-            </label>
+              </div>
+            </fieldset>
+
+            {filteredRooms.length === 0 ? (
+              <p
+                role="status"
+                className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 ring-1 ring-amber-200"
+              >
+                No rooms match your requirements. Try fewer attendees or less equipment.
+              </p>
+            ) : (
+              <label className="mb-4 block">
+                <span className="mb-1 block text-sm font-medium text-slate-700">
+                  Room ({filteredRooms.length} of {ROOMS.length} match)
+                </span>
+                <select
+                  value={room?.id ?? ''}
+                  onChange={(e) => {
+                    setRoomId(e.target.value);
+                    setResult(null);
+                  }}
+                  aria-label="Select room"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  {filteredRooms.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} · {r.capacity} seats
+                      {r.blocked ? ' (blocked)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label className="mb-4 block">
               <span className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-700">
@@ -192,7 +275,8 @@ function App() {
             <div className="mt-5 flex gap-3">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+                disabled={!room}
+                className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Check availability
               </button>
@@ -245,6 +329,8 @@ function App() {
               Existing bookings
             </h2>
 
+            {room ? (
+              <>
             <div className="mb-4 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
               <span className="text-sm font-medium text-slate-700">{room.name}</span>
               {room.blocked ? (
@@ -257,6 +343,10 @@ function App() {
                 </span>
               )}
             </div>
+
+            <p className="mb-4 text-xs text-slate-500">
+              Capacity: {room.capacity} · Equipment: {room.equipment.join(', ')}
+            </p>
 
             {room.bookings.length === 0 ? (
               <p className="py-8 text-center text-sm text-slate-400">
@@ -276,6 +366,10 @@ function App() {
                   </li>
                 ))}
               </ul>
+            )}
+              </>
+            ) : (
+              <p className="py-8 text-center text-sm text-slate-400">No room selected.</p>
             )}
 
             <p className="mt-4 text-xs text-slate-400">
