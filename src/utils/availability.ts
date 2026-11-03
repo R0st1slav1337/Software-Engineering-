@@ -6,9 +6,14 @@ export interface Booking {
 export interface Room {
   id: string;
   name: string;
+  capacity: number; // maximum number of people
+  equipment: string[];
   blocked: boolean;
   bookings: Booking[];
 }
+
+/** The part of a room that the availability rules need. */
+export type BookableRoom = Pick<Room, 'name' | 'blocked' | 'bookings'>;
 
 export interface AvailabilityResult {
   available: boolean;
@@ -23,7 +28,7 @@ function overlaps(a: Booking, start: number, end: number): boolean {
 }
 
 export function checkAvailability(
-  room: Room,
+  room: BookableRoom,
   currentTime: number,
   start: number,
   end: number

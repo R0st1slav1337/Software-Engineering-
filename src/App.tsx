@@ -12,13 +12,24 @@ const ROOMS: Room[] = [
   {
     id: 'room-a',
     name: 'Room A — Study Hall',
+    capacity: 30,
+    equipment: ['whiteboard', 'projector'],
     blocked: false,
     bookings: [{ start: 600, end: 660 }],
   },
-  { id: 'room-b', name: 'Room B — Lab', blocked: false, bookings: [] },
+  {
+    id: 'room-b',
+    name: 'Room B — Lab',
+    capacity: 20,
+    equipment: ['computers', 'projector'],
+    blocked: false,
+    bookings: [],
+  },
   {
     id: 'room-c',
     name: 'Room C — Auditorium',
+    capacity: 120,
+    equipment: ['projector', 'microphone', 'video-conferencing'],
     blocked: true,
     bookings: [
       { start: 480, end: 540 },
