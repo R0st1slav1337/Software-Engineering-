@@ -36,16 +36,33 @@ const ROOMS: Room[] = [
       { start: 780, end: 840 },
     ],
   },
+  {
+    id: 'room-d',
+    name: 'Room D — Seminar Room',
+    capacity: 12,
+    equipment: ['whiteboard', 'video-conferencing'],
+    blocked: false,
+    bookings: [
+      { start: 660, end: 720 },
+      { start: 840, end: 900 },
+    ],
+  },
+  {
+    id: 'room-e',
+    name: 'Room E — Workshop',
+    capacity: 8,
+    equipment: ['computers', 'whiteboard'],
+    blocked: false,
+    bookings: [{ start: 600, end: 720 }],
+  },
 ];
 
-const now = new Date();
-const currentTimeDefault = `${String(now.getHours()).padStart(2, '0')}:${String(
-  now.getMinutes()
-).padStart(2, '0')}`;
+// Fixed "current time" of the prototype (fictional data, deterministic behavior).
+const FIXED_CURRENT_TIME = '09:00';
 
 function App() {
   const [roomId, setRoomId] = useState(ROOMS[0].id);
-  const [currentTime, setCurrentTime] = useState(currentTimeDefault);
+  const [currentTime, setCurrentTime] = useState(FIXED_CURRENT_TIME);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [result, setResult] = useState<AvailabilityResult | null>(null);
