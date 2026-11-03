@@ -4,7 +4,8 @@ import type { AvailabilityResult, Room } from '@/types';
 import { ROOMS, EQUIPMENT_OPTIONS, FIXED_CURRENT_TIME } from '@/data/rooms';
 import { checkAvailability } from '@/utils/availability';
 import { filterRooms, parseAttendees } from '@/utils/filtering';
-import { formatTime, parseTime } from '@/utils/time';
+import { parseRequestTimes } from '@/utils/request';
+import { formatTime } from '@/utils/time';
 
 function App() {
   const [roomId, setRoomId] = useState(ROOMS[0].id);
@@ -38,26 +39,13 @@ function App() {
     e.preventDefault();
     if (!room) return;
 
-    const ct = parseField('current time', currentTime);
-    if (ct === null) return;
-    const st = parseField('start time', startTime);
-    if (st === null) return;
-    const en = parseField('end time', endTime);
-    if (en === null) return;
-
-    setResult(checkAvailability(room, ct, st, en));
-  };
-
-  function parseField(label: string, value: string): number | null {
-    const parsed = parseTime(value);
-    if (parsed === null) {
-      setResult({
-        available: false,
-        reason: `${label.charAt(0).toUpperCase()}${label.slice(1)} must be in HH:MM format.`,
-      });
+    const parsed = parseRequestTimes({ currentTime, startTime, endTime });
+    if (!parsed.ok) {
+      setResult({ available: false, reason: parsed.reason });
+      return;
     }
-    return parsed;
-  }
+    setResult(checkAvailability(room, parsed.currentTime, parsed.start, parsed.end));
+  };
 
   const reset = () => {
     setResult(null);
