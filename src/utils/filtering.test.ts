@@ -1,10 +1,7 @@
 import { describe, test, expect } from 'vitest';
-import {
-  checkAvailability,
-  filterRooms,
-  parseAttendees,
-  type Room,
-} from './availability';
+import type { Room } from '../types';
+import { checkAvailability } from './availability';
+import { filterRooms, parseAttendees } from './filtering';
 
 // Fictional fixture rooms (independent from the catalog shown in the UI)
 const makeRoom = (over: Partial<Room>): Room => ({

@@ -1,14 +1,9 @@
 import { useState, useMemo } from 'react';
 import { Clock, DoorClosed, CheckCircle2, XCircle, CalendarDays } from 'lucide-react';
-import {
-  Room,
-  AvailabilityResult,
-  checkAvailability,
-  filterRooms,
-  formatTime,
-  parseAttendees,
-  parseTime,
-} from '@/utils/availability';
+import type { AvailabilityResult, Room } from '@/types';
+import { checkAvailability } from '@/utils/availability';
+import { filterRooms, parseAttendees } from '@/utils/filtering';
+import { formatTime, parseTime } from '@/utils/time';
 
 const ROOMS: Room[] = [
   {
