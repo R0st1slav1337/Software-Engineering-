@@ -54,4 +54,14 @@ describe('UI behavior (integration)', () => {
     expect(screen.getByText('Unavailable')).toBeTruthy();
     expect(screen.getByText(/blocked/i, { selector: 'p.text-red-700' })).toBeTruthy();
   });
+
+  test('R1 AC1: a start time before the fixed current time (09:00) is rejected even when the current time field is changed', () => {
+    render(<App />);
+    setTime(/^current time \(hh:mm\)$/i, '07:00');
+    setTime(/^start \(hh:mm\)$/i, '08:00');
+    setTime(/^end \(hh:mm\)$/i, '08:30');
+    check();
+    expect(screen.getByText('Unavailable')).toBeTruthy();
+    expect(screen.getByText(/after the current time \(09:00\)/i)).toBeTruthy();
+  });
 });

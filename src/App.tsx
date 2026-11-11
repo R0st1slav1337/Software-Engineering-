@@ -15,7 +15,6 @@ function App() {
   const [roomId, setRoomId] = useState(ROOMS[0].id);
   const [attendees, setAttendees] = useState('');
   const [equipment, setEquipment] = useState<string[]>([]);
-  const [currentTime, setCurrentTime] = useState(FIXED_CURRENT_TIME);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [result, setResult] = useState<AvailabilityResult | null>(null);
@@ -48,7 +47,7 @@ function App() {
     e.preventDefault();
     if (!room) return;
 
-    const parsed = parseRequestTimes({ currentTime, startTime, endTime });
+    const parsed = parseRequestTimes({ currentTime: FIXED_CURRENT_TIME, startTime, endTime });
     if (!parsed.ok) {
       setResult({ available: false, reason: parsed.reason });
       return;
@@ -107,8 +106,8 @@ function App() {
             <div className="mb-4">
               <TimeField
                 label="Current time (HH:MM)"
-                value={currentTime}
-                onChange={edit(setCurrentTime)}
+                value={FIXED_CURRENT_TIME}
+                disabled
                 icon={<Clock className="h-3.5 w-3.5" />}
               />
             </div>
