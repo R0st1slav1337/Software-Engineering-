@@ -1,72 +1,60 @@
 import { useState, useMemo } from 'react';
-import { Clock, DoorClosed, CheckCircle2, XCircle, CalendarDays } from 'lucide-react';
-import {
-  Room,
-  AvailabilityResult,
-  checkAvailability,
-  formatTime,
-  parseTime,
-} from '@/utils/availability';
-
-const ROOMS: Room[] = [
-  {
-    id: 'room-a',
-    name: 'Room A — Study Hall',
-    blocked: false,
-    bookings: [{ start: 600, end: 660 }],
-  },
-  { id: 'room-b', name: 'Room B — Lab', blocked: false, bookings: [] },
-  {
-    id: 'room-c',
-    name: 'Room C — Auditorium',
-    blocked: true,
-    bookings: [
-      { start: 480, end: 540 },
-      { start: 780, end: 840 },
-    ],
-  },
-];
-
-const now = new Date();
-const currentTimeDefault = `${String(now.getHours()).padStart(2, '0')}:${String(
-  now.getMinutes()
-).padStart(2, '0')}`;
+import { Clock, DoorClosed, CalendarDays } from 'lucide-react';
+import type { AvailabilityResult, Room } from '@/types';
+import { ROOMS, EQUIPMENT_OPTIONS, FIXED_CURRENT_TIME } from '@/data/rooms';
+import { checkAvailability } from '@/utils/availability';
+import { filterRooms, parseAttendees } from '@/utils/filtering';
+import { parseRequestTimes } from '@/utils/request';
+import { FilterPanel } from '@/components/FilterPanel';
+import { RoomSelect } from '@/components/RoomSelect';
+import { TimeField } from '@/components/TimeField';
+import { ResultCard } from '@/components/ResultCard';
+import { BookingsPanel } from '@/components/BookingsPanel';
 
 function App() {
   const [roomId, setRoomId] = useState(ROOMS[0].id);
-  const [currentTime, setCurrentTime] = useState(currentTimeDefault);
+  const [attendees, setAttendees] = useState('');
+  const [equipment, setEquipment] = useState<string[]>([]);
+  const [currentTime, setCurrentTime] = useState(FIXED_CURRENT_TIME);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [result, setResult] = useState<AvailabilityResult | null>(null);
 
-  const room = useMemo(
-    () => ROOMS.find((r) => r.id === roomId)!,
-    [roomId]
+  const minAttendees = parseAttendees(attendees);
+
+  const filteredRooms = useMemo(
+    () => filterRooms(ROOMS, { minAttendees: minAttendees ?? 0, equipment }),
+    [minAttendees, equipment]
   );
+
+  // The chosen room, or the first matching room when the chosen one was filtered out.
+  const room: Room | null =
+    filteredRooms.find((r) => r.id === roomId) ?? filteredRooms[0] ?? null;
+
+  // Every input change makes the old result outdated (F5), so all handlers go through here.
+  const edit =
+    <T,>(setter: (value: T) => void) =>
+    (value: T) => {
+      setter(value);
+      setResult(null);
+    };
+
+  const toggleEquipment = (item: string) =>
+    edit(setEquipment)(
+      equipment.includes(item) ? equipment.filter((x) => x !== item) : [...equipment, item]
+    );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!room) return;
 
-    const ct = parseField('current time', currentTime);
-    if (ct === null) return;
-    const st = parseField('start time', startTime);
-    if (st === null) return;
-    const en = parseField('end time', endTime);
-    if (en === null) return;
-
-    setResult(checkAvailability(room, ct, st, en));
-  };
-
-  function parseField(label: string, value: string): number | null {
-    const parsed = parseTime(value);
-    if (parsed === null) {
-      setResult({
-        available: false,
-        reason: `${label.charAt(0).toUpperCase()}${label.slice(1)} must be in HH:MM format.`,
-      });
+    const parsed = parseRequestTimes({ currentTime, startTime, endTime });
+    if (!parsed.ok) {
+      setResult({ available: false, reason: parsed.reason });
+      return;
     }
-    return parsed;
-  }
+    setResult(checkAvailability(room, parsed.currentTime, parsed.start, parsed.end));
+  };
 
   const reset = () => {
     setResult(null);
@@ -91,7 +79,6 @@ function App() {
         </header>
 
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Form card */}
           <form
             onSubmit={handleSubmit}
             className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
@@ -101,60 +88,34 @@ function App() {
               Check a room
             </h2>
 
-            <label className="mb-4 block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Room</span>
-              <select
-                value={roomId}
-                onChange={(e) => {
-                  setRoomId(e.target.value);
-                  setResult(null);
-                }}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              >
-                {ROOMS.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                    {r.blocked ? ' (blocked)' : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <FilterPanel
+              attendees={attendees}
+              attendeesInvalid={minAttendees === null}
+              onAttendeesChange={edit(setAttendees)}
+              equipmentOptions={EQUIPMENT_OPTIONS}
+              selectedEquipment={equipment}
+              onToggleEquipment={toggleEquipment}
+            />
 
-            <label className="mb-4 block">
-              <span className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-700">
-                <Clock className="h-3.5 w-3.5" /> Current time (HH:MM)
-              </span>
-              <input
-                type="time"
+            <RoomSelect
+              rooms={filteredRooms}
+              totalRooms={ROOMS.length}
+              selectedId={room?.id ?? ''}
+              onChange={edit(setRoomId)}
+            />
+
+            <div className="mb-4">
+              <TimeField
+                label="Current time (HH:MM)"
                 value={currentTime}
-                onChange={(e) => setCurrentTime(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                onChange={edit(setCurrentTime)}
+                icon={<Clock className="h-3.5 w-3.5" />}
               />
-            </label>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <label className="mb-1 block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
-                  Start (HH:MM)
-                </span>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                />
-              </label>
-              <label className="mb-1 block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
-                  End (HH:MM)
-                </span>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                />
-              </label>
+              <TimeField label="Start (HH:MM)" value={startTime} onChange={edit(setStartTime)} />
+              <TimeField label="End (HH:MM)" value={endTime} onChange={edit(setEndTime)} />
             </div>
 
             <p className="mt-2 text-xs text-slate-400">
@@ -164,7 +125,8 @@ function App() {
             <div className="mt-5 flex gap-3">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+                disabled={!room}
+                className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Check availability
               </button>
@@ -177,83 +139,10 @@ function App() {
               </button>
             </div>
 
-            {result && (
-              <div
-                className={`mt-5 flex items-start gap-3 rounded-xl p-4 ${
-                  result.available
-                    ? 'bg-green-50 ring-1 ring-green-200'
-                    : 'bg-red-50 ring-1 ring-red-200'
-                }`}
-              >
-                {result.available ? (
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
-                ) : (
-                  <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
-                )}
-                <div>
-                  <p
-                    className={`text-sm font-semibold ${
-                      result.available ? 'text-green-800' : 'text-red-800'
-                    }`}
-                  >
-                    {result.available ? 'Available' : 'Unavailable'}
-                  </p>
-                  <p
-                    className={`text-sm ${
-                      result.available ? 'text-green-700' : 'text-red-700'
-                    }`}
-                  >
-                    {result.reason}
-                  </p>
-                </div>
-              </div>
-            )}
+            {result && <ResultCard result={result} />}
           </form>
 
-          {/* Bookings list card */}
-          <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-              <CalendarDays className="h-5 w-5 text-blue-600" />
-              Existing bookings
-            </h2>
-
-            <div className="mb-4 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-              <span className="text-sm font-medium text-slate-700">{room.name}</span>
-              {room.blocked ? (
-                <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
-                  Blocked
-                </span>
-              ) : (
-                <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                  Active
-                </span>
-              )}
-            </div>
-
-            {room.bookings.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-400">
-                No existing bookings for this room.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {room.bookings.map((b, i) => (
-                  <li
-                    key={i}
-                    className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                  >
-                    <span className="font-medium text-slate-700">
-                      {formatTime(b.start)} – {formatTime(b.end)}
-                    </span>
-                    <span className="text-xs text-slate-400">{b.end - b.start} min</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <p className="mt-4 text-xs text-slate-400">
-              Availability checks are read-only — no bookings are saved or confirmed.
-            </p>
-          </div>
+          <BookingsPanel room={room} />
         </div>
       </div>
     </div>
