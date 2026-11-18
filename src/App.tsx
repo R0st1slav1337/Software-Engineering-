@@ -1,15 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Clock, DoorClosed, CalendarDays } from 'lucide-react';
 import type { AvailabilityResult, Room } from '@/types';
 import { ROOMS, EQUIPMENT_OPTIONS, FIXED_CURRENT_TIME } from '@/data/rooms';
 import { checkAvailability } from '@/utils/availability';
 import { filterRooms, parseAttendees } from '@/utils/filtering';
 import { parseRequestTimes } from '@/utils/request';
+import { createMockAdapter, explainAvailability } from '@/llm/explain';
+import type { ExplainOutput, MockMode } from '@/llm/explain';
 import { FilterPanel } from '@/components/FilterPanel';
 import { RoomSelect } from '@/components/RoomSelect';
 import { TimeField } from '@/components/TimeField';
 import { ResultCard } from '@/components/ResultCard';
 import { BookingsPanel } from '@/components/BookingsPanel';
+import { ExplainPanel } from '@/components/ExplainPanel';
 
 function App() {
   const [roomId, setRoomId] = useState(ROOMS[0].id);
@@ -18,6 +21,16 @@ function App() {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [result, setResult] = useState<AvailabilityResult | null>(null);
+  const [mockMode, setMockMode] = useState<MockMode>('ok');
+  const [explanation, setExplanation] = useState<ExplainOutput | null>(null);
+  const [explaining, setExplaining] = useState(false);
+  // Invalidates a pending explain request whenever the result it belongs to changes.
+  const explainRequestId = useRef(0);
+
+  const invalidateExplain = () => {
+    explainRequestId.current += 1;
+    setExplaining(false);
+  };
 
   const minAttendees = parseAttendees(attendees);
 
@@ -36,6 +49,8 @@ function App() {
     (value: T) => {
       setter(value);
       setResult(null);
+      setExplanation(null);
+      invalidateExplain();
     };
 
   const toggleEquipment = (item: string) =>
@@ -49,16 +64,47 @@ function App() {
 
     const parsed = parseRequestTimes({ currentTime: FIXED_CURRENT_TIME, startTime, endTime });
     if (!parsed.ok) {
-      setResult({ available: false, reason: parsed.reason });
+      setResult({ available: false, reason: parsed.reason, reasonCode: 'INVALID_TIME' });
       return;
     }
+    setExplanation(null);
+    invalidateExplain();
     setResult(checkAvailability(room, parsed.currentTime, parsed.start, parsed.end));
+  };
+
+  const handleExplain = async () => {
+    if (!result || !room) return;
+    const requestId = ++explainRequestId.current;
+    setExplaining(true);
+    const output = await explainAvailability(
+      {
+        roomLabel: room.name,
+        start: startTime || '00:00',
+        end: endTime || '00:00',
+        isAvailable: result.available,
+        reasonCode: result.reasonCode,
+        conflict: result.conflict,
+      },
+      createMockAdapter(mockMode),
+      result.reason
+    );
+    if (explainRequestId.current !== requestId) return;
+    setExplaining(false);
+    setExplanation(output);
+  };
+
+  const changeMockMode = (mode: MockMode) => {
+    setMockMode(mode);
+    setExplanation(null);
+    invalidateExplain();
   };
 
   const reset = () => {
     setResult(null);
     setStartTime('');
     setEndTime('');
+    setExplanation(null);
+    invalidateExplain();
   };
 
   return (
@@ -139,6 +185,17 @@ function App() {
             </div>
 
             {result && <ResultCard result={result} />}
+
+            {result && (
+              <ExplainPanel
+                mode={mockMode}
+                onModeChange={changeMockMode}
+                onExplain={handleExplain}
+                busy={explaining}
+                disabled={!result}
+                output={explanation}
+              />
+            )}
           </form>
 
           <BookingsPanel room={room} />

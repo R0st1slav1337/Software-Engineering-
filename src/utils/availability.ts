@@ -17,6 +17,7 @@ export function checkAvailability(
   if (!(0 <= start && start < end && end <= MINUTES_PER_DAY)) {
     return {
       available: false,
+      reasonCode: 'INVALID_TIME',
       reason: 'Start time must be earlier than end time, and both must be between 00:00 and 24:00.'
     };
   }
@@ -24,6 +25,7 @@ export function checkAvailability(
   if (start <= currentTime) {
     return {
       available: false,
+      reasonCode: 'PAST_TIME',
       reason: `Start time must be after the current time (${formatTime(currentTime)}).`
     };
   }
@@ -31,6 +33,7 @@ export function checkAvailability(
   if (end - start > MAX_DURATION) {
     return {
       available: false,
+      reasonCode: 'TOO_LONG',
       reason: `Booking duration is ${end - start} minutes, which exceeds the 120-minute limit.`
     };
   }
@@ -38,20 +41,25 @@ export function checkAvailability(
   if (room.blocked) {
     return {
       available: false,
+      reasonCode: 'BLOCKED',
       reason: `${room.name} is currently blocked and unavailable for booking.`,
     };
   }
 
   for (const booking of room.bookings) {
     if (overlaps(booking, start, end)) {
+      const conflict: Booking = { start: booking.start, end: booking.end };
       return {
         available: false,
+        reasonCode: 'OVERLAP',
+        conflict,
         reason: `This interval overlaps an existing booking from ${formatTime(booking.start)} to ${formatTime(booking.end)}.`
       };
     }
   }
   return {
     available: true,
+    reasonCode: 'AVAILABLE',
     reason: `${room.name} is available ${formatTime(start)}–${formatTime(end)}.`,
   };
 }

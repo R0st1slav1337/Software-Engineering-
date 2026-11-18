@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, test, expect, afterEach } from 'vitest';
+import { describe, test, expect, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import App from '@/App';
 
@@ -63,5 +63,49 @@ describe('UI behavior (integration)', () => {
     check();
     expect(screen.getByText('Unavailable')).toBeTruthy();
     expect(screen.getByText(/after the current time \(09:00\)/i)).toBeTruthy();
+  });
+
+  test('R2: a pending explanation never attaches to a newer result', async () => {
+    vi.useFakeTimers();
+    try {
+      render(<App />);
+      fireEvent.change(roomSelect(), { target: { value: 'room-a' } });
+      setTime(/^start \(hh:mm\)$/i, '12:00');
+      setTime(/^end \(hh:mm\)$/i, '13:00');
+      check();
+      expect(screen.getByText('Available')).toBeTruthy();
+
+      fireEvent.change(screen.getByLabelText('Mock mode'), {
+        target: { value: 'timeout' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /explain availability/i }));
+
+      // While the explanation is still pending, switch to Room C (blocked)
+      // and run a new check; changing the room clears result and explanation.
+      fireEvent.change(roomSelect(), { target: { value: 'room-c' } });
+      check();
+      expect(screen.getByText('Unavailable')).toBeTruthy();
+
+      // Past the 3s explainer timeout: the stale Room A fallback must not appear.
+      await vi.advanceTimersByTimeAsync(3500);
+
+      expect(screen.getByText('Unavailable')).toBeTruthy();
+      expect(screen.queryByText(/Room A — Study Hall is available/)).toBeNull();
+      expect(screen.queryByText('Standard explanation')).toBeNull();
+
+      // The spinner must not be stuck: the Explain button is usable again.
+      const explainButton = screen.getByRole('button', { name: /explain availability/i });
+      expect((explainButton as HTMLButtonElement).disabled).toBe(false);
+
+      // A fresh explanation can be produced for the current (Room C) result.
+      fireEvent.change(screen.getByLabelText('Mock mode'), { target: { value: 'ok' } });
+      fireEvent.click(explainButton);
+      await vi.advanceTimersByTimeAsync(0);
+      const explanationBox = screen.getByText(/AI-generated explanation \(mock\)/);
+      expect(explanationBox).toBeTruthy();
+      expect(screen.getByText(/Room C — Auditorium is not available/)).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

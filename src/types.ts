@@ -20,7 +20,18 @@ export interface RoomRequirements {
   equipment: string[]; // room must have ALL of these items
 }
 
+export type ReasonCode =
+  | 'AVAILABLE'
+  | 'INVALID_TIME'
+  | 'PAST_TIME'
+  | 'TOO_LONG'
+  | 'BLOCKED'
+  | 'OVERLAP';
+
 export interface AvailabilityResult {
   available: boolean;
   reason: string;
+  reasonCode: ReasonCode;
+  /** Present only when reasonCode is 'OVERLAP'. */
+  conflict?: Booking;
 }
