@@ -1,5 +1,11 @@
 # Practice #12 – Low-code solution in Power Apps (build guide)
 
+## As built (25 Nov 2026)
+App `SmartCampusChecker_LowCode`, Tablet format, environment KBTU (default). Studio ran in a Russian locale, so the real formulas use `;` between arguments and `;;` between actions (the guide below shows the English-locale form).
+Actual control names: `Dropdown1` (room, Items `colRooms`, Value `Name`), `Label4` (room status text: Active / Blocked, used instead of a toggle), `TextInput1` (start), `TextInput2` (duration), `Button1` (OnSelect = workflow below with `TextInput1/2` and `Dropdown1`), `Label3` (decision + message + reason code, colored), `Label2` (bookings header with `CountRows(colBookings)`), `Gallery1` (`Title1` interval, `Subtitle1` minutes), `Label1` (title).
+Not implemented: clearing the old result when an input changes (OnChange reset).
+
+
 Canvas app, fictional data in local collections. No Dataverse, SharePoint, connectors, login or premium features.
 
 > Formula separators: in English locale formulas use `,` between arguments and `;` between actions.
