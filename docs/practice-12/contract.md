@@ -46,11 +46,11 @@ Check order: start format -> start in the future -> duration -> end of day (end 
 ## Common test inputs (prepared before implementation)
 | Test | Room | Start | Duration | Expected |
 |------|------|-------|----------|----------|
-| T1 valid free interval | D | 09:30 | 60 | Available, AVAILABLE |
-| T2 overlap | D | 11:30 | 60 | Unavailable, OVERLAP (11:00–12:00) |
-| T3 blocked room | C | 10:00 | 30 | Unavailable, BLOCKED |
-| T4 duration = 0 | D | 10:00 | 0 | Validation error, INVALID_DURATION |
-| T5 duration = 121 | D | 15:00 | 121 | Validation error, TOO_LONG |
-| T6 past start | D | 08:00 | 30 | Validation error, PAST_TIME |
-| T7 adjacent interval | D | 12:00 | 120 | Available (12:00–14:00 touches both bookings) |
-| T8 data unchanged | – | after T1–T7 | – | Room D still has exactly 11:00–12:00 and 14:00–15:00; 6 bookings in total |
+| T1 valid free interval | A | 12:00 | 80 | Available, AVAILABLE (12:00–13:20) |
+| T2 overlap | A | 10:00 | 80 | Unavailable, OVERLAP (10:00–11:00) |
+| T3 blocked room | C | 10:00 | 80 | Unavailable, BLOCKED |
+| T4 duration = 0 | B | 10:00 | 0 | Validation error, INVALID_DURATION |
+| T5 duration = 121 | B | 10:00 | 121 | Validation error, TOO_LONG |
+| T6 past start | B | 07:00 | 21 | Validation error, PAST_TIME |
+| T7 adjacent interval | A | 11:00 | 21 | Available (11:00–11:21 starts when 10:00–11:00 ends) |
+| T8 data unchanged | – | after T1–T7 | – | Rooms keep their bookings (Room A 10:00–11:00, Room D 11:00–12:00 and 14:00–15:00); 6 bookings in total |

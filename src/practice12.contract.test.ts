@@ -6,7 +6,7 @@ import type { AvailabilityResult } from './types';
 
 /**
  * Practice #12 shared contract, T1-T8 (same inputs as the Power Apps version).
- * Room D (Seminar Room): bookings 11:00-12:00 and 14:00-15:00, not blocked.
+ * Room A (Study Hall): booking 10:00-11:00, not blocked. Room B (Lab): no bookings.
  * Room C (Auditorium): blocked. Current time is fixed at 09:00.
  */
 function check(roomId: string, startTime: string, duration: string): AvailabilityResult {
@@ -17,36 +17,36 @@ function check(roomId: string, startTime: string, duration: string): Availabilit
 }
 
 describe('Practice #12 contract tests T1-T8', () => {
-  test('T1 valid free interval (Room D, 09:30, 60) -> Available', () => {
-    expect(check('room-d', '09:30', '60')).toMatchObject({ available: true, reasonCode: 'AVAILABLE' });
+  test('T1 valid free interval (Room A, 12:00, 80) -> AVAILABLE', () => {
+    expect(check('room-a', '12:00', '80')).toMatchObject({ available: true, reasonCode: 'AVAILABLE' });
   });
-  test('T2 overlap (Room D, 11:30, 60) -> Unavailable OVERLAP', () => {
-    expect(check('room-d', '11:30', '60')).toMatchObject({ available: false, reasonCode: 'OVERLAP' });
+  test('T2 overlap (Room A, 10:00, 80) -> OVERLAP', () => {
+    expect(check('room-a', '10:00', '80')).toMatchObject({ available: false, reasonCode: 'OVERLAP' });
   });
-  test('T3 blocked room (Room C, 10:00, 30) -> Unavailable BLOCKED', () => {
-    expect(check('room-c', '10:00', '30')).toMatchObject({ available: false, reasonCode: 'BLOCKED' });
+  test('T3 blocked room (Room C, 10:00, 80) -> BLOCKED', () => {
+    expect(check('room-c', '10:00', '80')).toMatchObject({ available: false, reasonCode: 'BLOCKED' });
   });
-  test('T4 duration 0 (Room D, 10:00, 0) -> INVALID_DURATION', () => {
-    expect(check('room-d', '10:00', '0')).toMatchObject({ available: false, reasonCode: 'INVALID_DURATION' });
+  test('T4 duration = 0 (Room B, 10:00, 0) -> INVALID_DURATION', () => {
+    expect(check('room-b', '10:00', '0')).toMatchObject({ available: false, reasonCode: 'INVALID_DURATION' });
   });
-  test('T5 duration 121 (Room D, 15:00, 121) -> TOO_LONG', () => {
-    expect(check('room-d', '15:00', '121')).toMatchObject({ available: false, reasonCode: 'TOO_LONG' });
+  test('T5 duration = 121 (Room B, 10:00, 121) -> TOO_LONG', () => {
+    expect(check('room-b', '10:00', '121')).toMatchObject({ available: false, reasonCode: 'TOO_LONG' });
   });
-  test('T6 past start (Room D, 08:00, 30) -> PAST_TIME', () => {
-    expect(check('room-d', '08:00', '30')).toMatchObject({ available: false, reasonCode: 'PAST_TIME' });
+  test('T6 past start (Room B, 07:00, 21) -> PAST_TIME', () => {
+    expect(check('room-b', '07:00', '21')).toMatchObject({ available: false, reasonCode: 'PAST_TIME' });
   });
-  test('T7 adjacent interval (Room D, 12:00, 120 = 12:00-14:00) -> Available', () => {
-    expect(check('room-d', '12:00', '120')).toMatchObject({ available: true, reasonCode: 'AVAILABLE' });
+  test('T7 adjacent interval (Room A, 11:00, 21) -> AVAILABLE', () => {
+    expect(check('room-a', '11:00', '21')).toMatchObject({ available: true, reasonCode: 'AVAILABLE' });
   });
   test('T8 booking data unchanged after T1-T7', () => {
     const before = JSON.stringify(ROOMS);
-    check('room-d', '09:30', '60');
-    check('room-d', '11:30', '60');
-    check('room-c', '10:00', '30');
-    check('room-d', '10:00', '0');
-    check('room-d', '15:00', '121');
-    check('room-d', '08:00', '30');
-    check('room-d', '12:00', '120');
+    check('room-a', '12:00', '80');
+    check('room-a', '10:00', '80');
+    check('room-c', '10:00', '80');
+    check('room-b', '10:00', '0');
+    check('room-b', '10:00', '121');
+    check('room-b', '07:00', '21');
+    check('room-a', '11:00', '21');
     expect(JSON.stringify(ROOMS)).toBe(before);
   });
 });
