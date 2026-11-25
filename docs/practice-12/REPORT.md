@@ -1,10 +1,10 @@
 # AI-Driven Software Engineering – Practice #12
 ## Compare code-based and low-code solutions (Smart Campus Room Availability Checker)
-
-**Student:** Krivenko Rostislav, 24B031854
-**Class:** Wednesday, 08:00–11:00
-**AI tool:** Claude (Anthropic), model Claude Opus 5.5 (`claude-opus-5-5`), Claude desktop app
-**Repository (branch `practice-12`):** https://github.com/R0st1slav1337/Software-Engineering-/tree/practice-12
+  
+**Student:** Krivenko Rostislav, 24B031854  
+**Class:** Wednesday, 08:00–11:00  
+**AI tool:** Claude (Anthropic), model Claude Opus 5.5 (`claude-opus-5-5`), Claude desktop app  
+**Repository (branch `practice-12`):** https://github.com/R0st1slav1337/Software-Engineering-/tree/practice-12  
 **Low-code app (Power Apps, published inside the KBTU tenant only):** https://apps.powerapps.com/play/e/default-57081b5e-e66a-4993-8eaf-15b0b309293f/a/89850282-95aa-4048-9128-27815fe7161e?tenantId=57081b5e-e66a-4993-8eaf-15b0b309293f
 
 ### Supporting files

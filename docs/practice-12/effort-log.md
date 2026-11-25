@@ -14,5 +14,5 @@ Times are wall-clock minutes recorded during the work on 25 Nov 2026. Personal i
 | Review / versioning | git branch `practice-12`, diff reviewed, commit pushed | Power Apps version history only; logic is one OnSelect formula, no diff/review; export as .msapp/.zip |
 
 ## Personal impressions (not measured)
-- Code-based: 
-- Low-code: 
+- Code-based: familiar workflow; existing tests made it easy to check that the change did not break anything.
+- Low-code: Power Apps Studio was inconvenient and confusing to use (studio language could not be switched to English, Russian locale changed formula separators).
