@@ -8,6 +8,8 @@ afterEach(cleanup);
 const roomSelect = () => screen.getByLabelText('Select room') as HTMLSelectElement;
 const setTime = (label: RegExp, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
+const setDuration = (value: string) =>
+  fireEvent.change(screen.getByLabelText(/^duration \(minutes\)$/i), { target: { value } });
 const check = () => fireEvent.click(screen.getByRole('button', { name: /check availability/i }));
 
 describe('UI behavior (integration)', () => {
@@ -33,7 +35,7 @@ describe('UI behavior (integration)', () => {
     render(<App />);
     // Room A (default) has a booking 10:00-11:00; current time is fixed at 09:00
     setTime(/^start \(hh:mm\)$/i, '10:15');
-    setTime(/^end \(hh:mm\)$/i, '10:45');
+    setDuration('30');
     check();
     expect(screen.getByText('Unavailable')).toBeTruthy();
 
@@ -49,7 +51,7 @@ describe('UI behavior (integration)', () => {
     render(<App />);
     fireEvent.change(roomSelect(), { target: { value: 'room-c' } });
     setTime(/^start \(hh:mm\)$/i, '10:00');
-    setTime(/^end \(hh:mm\)$/i, '11:00');
+    setDuration('60');
     check();
     expect(screen.getByText('Unavailable')).toBeTruthy();
     expect(screen.getByText(/blocked/i, { selector: 'p.text-red-700' })).toBeTruthy();
@@ -59,7 +61,7 @@ describe('UI behavior (integration)', () => {
     render(<App />);
     setTime(/^current time \(hh:mm\)$/i, '07:00');
     setTime(/^start \(hh:mm\)$/i, '08:00');
-    setTime(/^end \(hh:mm\)$/i, '08:30');
+    setDuration('30');
     check();
     expect(screen.getByText('Unavailable')).toBeTruthy();
     expect(screen.getByText(/after the current time \(09:00\)/i)).toBeTruthy();
@@ -71,7 +73,7 @@ describe('UI behavior (integration)', () => {
       render(<App />);
       fireEvent.change(roomSelect(), { target: { value: 'room-a' } });
       setTime(/^start \(hh:mm\)$/i, '12:00');
-      setTime(/^end \(hh:mm\)$/i, '13:00');
+      setDuration('60');
       check();
       expect(screen.getByText('Available')).toBeTruthy();
 

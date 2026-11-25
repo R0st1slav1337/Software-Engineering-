@@ -31,6 +31,7 @@ export function ResultCard({ result }: { result: AvailabilityResult }) {
       <div>
         <p className={`text-sm font-semibold ${tone.heading}`}>{tone.title}</p>
         <p className={`text-sm ${tone.text}`}>{result.reason}</p>
+        <p className="mt-1 font-mono text-xs text-slate-500">Reason code: {result.reasonCode}</p>
       </div>
     </div>
   );

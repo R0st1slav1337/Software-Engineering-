@@ -174,6 +174,7 @@ describe('valid input per reasonCode (mock text built from the facts)', () => {
     { code: 'AVAILABLE', isAvailable: true },
     { code: 'INVALID_TIME', isAvailable: false },
     { code: 'PAST_TIME', isAvailable: false },
+    { code: 'INVALID_DURATION', isAvailable: false },
     { code: 'TOO_LONG', isAvailable: false },
     { code: 'BLOCKED', isAvailable: false },
     { code: 'OVERLAP', isAvailable: false },

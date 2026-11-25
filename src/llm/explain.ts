@@ -20,6 +20,7 @@ const REASON_CODES: ReasonCode[] = [
   'AVAILABLE',
   'INVALID_TIME',
   'PAST_TIME',
+  'INVALID_DURATION',
   'TOO_LONG',
   'BLOCKED',
   'OVERLAP',
@@ -80,6 +81,8 @@ function mockExplanationFromFacts(facts: PromptFacts): string {
       return `${facts.room} is not available because the room is currently blocked for booking.`;
     case 'PAST_TIME':
       return 'This request is not available because the start time is not after the current time.';
+    case 'INVALID_DURATION':
+      return 'This request is not available because the duration is not a valid number of minutes.';
     case 'TOO_LONG':
       return 'This request is not available because it is longer than the 120-minute limit.';
     case 'INVALID_TIME':
@@ -119,7 +122,7 @@ export function createMockAdapter(mode: MockMode = 'ok'): ExplainAdapter {
             ),
           10000
         );
-        if (typeof timer === 'object' && timer !== null && 'unref' in timer) timer.unref();
+        (timer as { unref?: () => void }).unref?.();
       });
     }
     return Promise.resolve(JSON.stringify({ explanation: mockExplanationFromFacts(parseFacts(prompt)) }));

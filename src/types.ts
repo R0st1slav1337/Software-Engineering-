@@ -24,6 +24,7 @@ export type ReasonCode =
   | 'AVAILABLE'
   | 'INVALID_TIME'
   | 'PAST_TIME'
+  | 'INVALID_DURATION'
   | 'TOO_LONG'
   | 'BLOCKED'
   | 'OVERLAP';

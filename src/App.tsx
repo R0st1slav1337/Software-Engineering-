@@ -4,12 +4,14 @@ import type { AvailabilityResult, Room } from '@/types';
 import { ROOMS, EQUIPMENT_OPTIONS, FIXED_CURRENT_TIME } from '@/data/rooms';
 import { checkAvailability } from '@/utils/availability';
 import { filterRooms, parseAttendees } from '@/utils/filtering';
-import { parseRequestTimes } from '@/utils/request';
+import { validateRequest } from '@/utils/validation';
+import { formatTime } from '@/utils/time';
 import { createMockAdapter, explainAvailability } from '@/llm/explain';
 import type { ExplainOutput, MockMode } from '@/llm/explain';
 import { FilterPanel } from '@/components/FilterPanel';
 import { RoomSelect } from '@/components/RoomSelect';
 import { TimeField } from '@/components/TimeField';
+import { DurationField } from '@/components/DurationField';
 import { ResultCard } from '@/components/ResultCard';
 import { BookingsPanel } from '@/components/BookingsPanel';
 import { ExplainPanel } from '@/components/ExplainPanel';
@@ -19,7 +21,9 @@ function App() {
   const [attendees, setAttendees] = useState('');
   const [equipment, setEquipment] = useState<string[]>([]);
   const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [duration, setDuration] = useState('');
+  // End of the last valid request, shown to the explainer (HH:MM).
+  const [checkedEnd, setCheckedEnd] = useState('');
   const [result, setResult] = useState<AvailabilityResult | null>(null);
   const [mockMode, setMockMode] = useState<MockMode>('ok');
   const [explanation, setExplanation] = useState<ExplainOutput | null>(null);
@@ -62,14 +66,18 @@ function App() {
     e.preventDefault();
     if (!room) return;
 
-    const parsed = parseRequestTimes({ currentTime: FIXED_CURRENT_TIME, startTime, endTime });
-    if (!parsed.ok) {
-      setResult({ available: false, reason: parsed.reason, reasonCode: 'INVALID_TIME' });
-      return;
-    }
     setExplanation(null);
     invalidateExplain();
-    setResult(checkAvailability(room, parsed.currentTime, parsed.start, parsed.end));
+
+    // 1) validation layer -> 2) availability rules -> 3) UI (ResultCard)
+    const request = validateRequest({ currentTime: FIXED_CURRENT_TIME, startTime, duration });
+    if (!request.ok) {
+      setCheckedEnd('');
+      setResult({ available: false, reason: request.reason, reasonCode: request.reasonCode });
+      return;
+    }
+    setCheckedEnd(formatTime(request.end));
+    setResult(checkAvailability(room, request.currentTime, request.start, request.end));
   };
 
   const handleExplain = async () => {
@@ -80,7 +88,7 @@ function App() {
       {
         roomLabel: room.name,
         start: startTime || '00:00',
-        end: endTime || '00:00',
+        end: checkedEnd || '00:00',
         isAvailable: result.available,
         reasonCode: result.reasonCode,
         conflict: result.conflict,
@@ -102,7 +110,8 @@ function App() {
   const reset = () => {
     setResult(null);
     setStartTime('');
-    setEndTime('');
+    setDuration('');
+    setCheckedEnd('');
     setExplanation(null);
     invalidateExplain();
   };
@@ -125,6 +134,7 @@ function App() {
 
         <div className="grid gap-6 md:grid-cols-2">
           <form
+            noValidate
             onSubmit={handleSubmit}
             className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
           >
@@ -160,11 +170,11 @@ function App() {
 
             <div className="grid grid-cols-2 gap-3">
               <TimeField label="Start (HH:MM)" value={startTime} onChange={edit(setStartTime)} />
-              <TimeField label="End (HH:MM)" value={endTime} onChange={edit(setEndTime)} />
+              <DurationField value={duration} onChange={edit(setDuration)} />
             </div>
 
             <p className="mt-2 text-xs text-slate-400">
-              Max 120 min · end ≤ 24:00 · start after current time
+              Duration 1–120 min · end ≤ 24:00 · start after current time
             </p>
 
             <div className="mt-5 flex gap-3">
